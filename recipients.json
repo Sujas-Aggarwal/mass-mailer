@@ -1,0 +1,12 @@
+{
+    "name": "Sujas",
+    "email": "sujaskhadria@gmail.com",
+    "subject": "Greetings to You ${name}",
+    "body": "How are you doing ${name}?",
+    "recievers":[
+        {
+            "name": "Sujas",
+            "email": "sujaskhadria@gmail.com"
+        }
+    ]
+}
