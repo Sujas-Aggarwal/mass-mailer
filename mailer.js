@@ -1,19 +1,30 @@
-const nodemailer = require('nodemailer');
-const { google } = require('googleapis');
-const fs = require('fs');
-const path = require('path');
+const nodemailer = require("nodemailer");
+const { google } = require("googleapis");
+const fs = require("fs");
+const path = require("path");
+const { authorize, saveToken } = require("./oauth");
 
 // Load custom variables from environment
-const EMAIL = "johndoe@gmail.com";  // Replace with your email
+const EMAIL = "iitd.sujas@gmail.com"; // Replace with your email
 
 // Load credentials and token
 let credentials, token;
 try {
-  credentials = JSON.parse(fs.readFileSync('client.json'));
-  token = JSON.parse(fs.readFileSync('token.json'));
-  console.log('Credentials and token loaded successfully');  // Debug log
+  credentials = JSON.parse(fs.readFileSync("client.json"));
+  token = {};
+  try {
+    token = JSON.parse(fs.readFileSync("token.json"));
+  } catch (e) {
+    console.log("Token not found");
+    // Load client secrets from a local file.
+    fs.readFile("client.json", (err, content) => {
+      if (err) return console.log("Error loading client secret file:", err);
+      authorize(JSON.parse(content), saveToken);
+    });
+  }
+  console.log("Credentials and token loaded successfully"); // Debug log
 } catch (error) {
-  console.error('Error loading credentials or token:', error);
+  console.error("Error loading credentials or token:", error);
   process.exit(1);
 }
 
@@ -32,31 +43,33 @@ oauth2Client.setCredentials({ refresh_token });
 // Load recipients
 let mail;
 try {
-  mail = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'recipients.json')));
-  console.log('Recipients loaded:', mail);  // Debug log
+  mail = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, "recipients.json"))
+  );
+  console.log("Recipients loaded:", mail); // Debug log
 } catch (error) {
-  console.error('Error loading recipients:', error);
+  console.error("Error loading recipients:", error);
   process.exit(1);
 }
 
 async function mailSender() {
   try {
-    const targetEmails = mail.recievers || [];  // Note: 'recievers' is misspelled
-    console.log('Target emails:', targetEmails);  // Debug log
+    const targetEmails = mail.recievers || []; // Note: 'recievers' is misspelled
+    console.log("Target emails:", targetEmails); // Debug log
     let successCount = 0;
     let failureCount = 0;
 
     // Get access token
-    console.log('Getting access token...');  // Debug log
+    console.log("Getting access token..."); // Debug log
     const accessTokenResponse = await oauth2Client.getAccessToken();
     const accessToken = accessTokenResponse.token;
-    console.log('Access token obtained');  // Debug log
+    console.log("Access token obtained"); // Debug log
 
     // Create reusable transporter object using OAuth2
     const transporter = nodemailer.createTransport({
-      service: 'gmail',
+      service: "gmail",
       auth: {
-        type: 'OAuth2',
+        type: "OAuth2",
         user: EMAIL,
         clientId: client_id,
         clientSecret: client_secret,
@@ -68,17 +81,19 @@ async function mailSender() {
     // Iterate through target emails and send emails
     for (const target of targetEmails) {
       if (!target) {
-        console.log('Skipping empty target');  // Debug log
+        console.log("Skipping empty target"); // Debug log
         continue;
       }
       try {
-        console.log(`Attempting to send email to ${target.email}`);  // Debug log
+        console.log(`Attempting to send email to ${target.email}`); // Debug log
         await transporter.sendMail({
           from: `${mail.name} <${mail.email || EMAIL}>`,
           to: target.email,
-          subject: mail.subject.replace('${name}', target.name),
-          text: '',
-          html: mail.body.replace('${name}', target.name) || 'Please Ignore This Email',
+          subject: mail.subject.replace("${name}", target.name),
+          text: "",
+          html:
+            mail.body.replace("${name}", target.name) ||
+            "Please Ignore This Email",
         });
         successCount++;
         console.log(`Email sent successfully to ${target.email}`);
@@ -88,9 +103,11 @@ async function mailSender() {
       }
     }
 
-    console.log(`Emails sent: ${successCount}, Failed attempts: ${failureCount}`);
+    console.log(
+      `Emails sent: ${successCount}, Failed attempts: ${failureCount}`
+    );
   } catch (err) {
-    console.error('Error in mailSender function:', err);
+    console.error("Error in mailSender function:", err);
   }
 }
 

@@ -61,3 +61,4 @@ function saveToken(oAuth2Client) {
         }
     );
 }
+module.exports = { authorize,saveToken};
